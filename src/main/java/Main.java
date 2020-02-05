@@ -9,7 +9,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Main {
     private static String infile = "src/main/data/mongo.csv";
@@ -20,7 +20,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
 
-       // Parsing CSV file
+        // Parsing CSV file
         CSVReader reader = new CSVReader(new FileReader(infile) , ',' , '"','\\');
         List<String[]> linesFromFile = reader.readAll();
         for (int i = 0; i < linesFromFile.size() ; i++) {
@@ -41,70 +41,34 @@ public class Main {
             Document newStudent = new Document();
             newStudent.append("name", line[0]);
             newStudent.append("age", Integer.parseInt(line[1]));
-            newStudent.append("Courses", line[2]);
+            newStudent.append("courses", line[2]);
             students.add(newStudent);
         });
 
         // Adding all object to database
         newCollection.insertMany(students);
 
+        // Printing collection size
         long collectionSize = newCollection.countDocuments();
+        System.out.println("Total students: " + collectionSize);
 
-        BsonDocument query = BsonDocument.parse("{age: {$gt: 40}}");
-//        collection.find(query).forEach((Consumer<Document>) document -> {
-//            System.out.println("Наш второй документ:\n" + document);
-//        });
-        List<Consumer<Document>> olderThan40 = new ArrayList<>();
-       // newCollection.find(query).forEach((Consumer<Document>) doc -> System.out.println(doc.get("age")));
-
-        newCollection.find(query).forEach((Consumer<Document>) doc -> {
-            olderThan40.add((Consumer<Document>) doc);
-        });
-
-        System.out.println(olderThan40.size());
-
-        //  System.out.println(newCollection.count());
-       // System.out.println(newRes.size());
+        // Getting and printing count of students, older than 40
+        BsonDocument queryFour = BsonDocument.parse("{age: {$gt: 40}}");
+        Iterable<Document> count = newCollection.find(queryFour);
+        AtomicInteger i = new AtomicInteger();
+        count.forEach(document -> i.getAndIncrement());
+        System.out.println("Students, older than 40: " + i);
 
 
-//        newCollection.find().forEach((Consumer<Document>) record -> {
-//            System.out.println(record.toString());
-//        });
+        // Getting and printing yangest student name
+        BsonDocument queryYangest = BsonDocument.parse("{age: 1}");
+        Iterable<Document> yangestStudent = newCollection.find().sort(queryYangest).limit(1);
+        yangestStudent.forEach(student -> System.out.println("Yangest student name is: " + student.get("name")));
 
+        //Getting and printing oldest student courses
+        BsonDocument queryOldest = BsonDocument.parse("{age: -1}");
+        Iterable<Document> oldestStudent = newCollection.find().sort(queryOldest).limit(1);
+        oldestStudent.forEach(student -> System.out.println("Oldest student courses are: " + student.get("courses")));
 
-//        // Создадим первый документ
-//        Document firstDocument = new Document()
-//                .append("Type", 1)
-//                .append("Description", "Это наш первый документ в MongoDB")
-//                .append("Author", "Я")
-//                .append("Time", new SimpleDateFormat().format(new Date()));
-//
-//
-//        // Вложенный объект
-//        Document nestedObject = new Document()
-//                .append("Course", "NoSQL Базы Данных")
-//                .append("Author", "Mike Ovchinnikov");
-//
-//        firstDocument.append("Skillbox", nestedObject);
-//
-//
-//        // Вставляем документ в коллекцию
-//        collection.insertOne(firstDocument);
-
-//        newCollection.find().forEach((Consumer<Document>) document -> {
-//            System.out.println(document);
-//        });
-////
-//        // Используем JSON-синтаксис для создания объекта
-//        Document secondDocument = Document.parse(
-//                "{Type: 2, Description:\"Мы создали и нашли этот документ с помощью JSON-синтаксиса\"}"
-//        );
-//        collection.insertOne(secondDocument);
-//
-//        // Используем JSON-синтаксис для написания запроса (выбираем документы с Type=2)
-//        BsonDocument query = BsonDocument.parse("{Type: {$eq: 2}}");
-//        collection.find(query).forEach((Consumer<Document>) document -> {
-//            System.out.println("Наш второй документ:\n" + document);
-//        });
     }
 }
